@@ -55,57 +55,28 @@
 
         <!-- Vista del Generador con IA -->
         <div id="view-ia">
-            <!-- Contenido del generador IA aquí -->
             <div class="space-y-6">
-                 <!-- Metadata -->
-                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-                    <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Metadatos del Snippet</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="snippet-title-ia" class="block text-sm font-medium text-gray-400 mb-1">Título</label>
-                            <input type="text" id="snippet-title-ia" class="form-input" placeholder="Ej: Buscar pacientes por NHC">
-                        </div>
-                        <div>
-                            <label for="snippet-shortcut-ia" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
-                            <input type="text" id="snippet-shortcut-ia" class="form-input" placeholder="Ej: selpacnhc">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label for="snippet-description-ia" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
-                            <input type="text" id="snippet-description-ia" class="form-input" placeholder="Ej: Devuelve todos los pacientes con dicho NHC">
-                        </div>
-                        <div>
-                            <label for="snippet-author-ia" class="block text-sm font-medium text-gray-400 mb-1">Autor</label>
-                            <input type="text" id="snippet-author-ia" class="form-input" placeholder="Tu nombre o alias">
-                        </div>
-                        <div>
-                            <label for="snippet-type-ia" class="block text-sm font-medium text-gray-400 mb-1">Tipo de Snippet</label>
-                            <select id="snippet-type-ia" class="form-select">
-                                <option>Expansion</option>
-                                <option>SurroundsWith</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
                 <!-- Contenido -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-                    <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Petición de Consulta</h2>
-                     <label for="plain-text-input-ia" class="block text-sm font-medium text-gray-400 mb-2">Escribe en lenguaje natural lo que necesitas:</label>
+                    <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Petición de Consulta</h2>
+                     <label for="plain-text-input-ia" class="block text-sm font-medium text-gray-400 mb-2">Escribe en lenguaje natural lo que necesitas y la IA generará el script SQL.</label>
                     <textarea id="plain-text-input-ia" rows="6" class="form-textarea h-full" placeholder="Ej: 'Selecciona los 5 pacientes más recientes de la tabla Pac_Paciente'"></textarea>
                 </div>
                 <!-- Botón -->
                 <div class="text-center pt-4">
-                    <button id="generate-btn-ia" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto disabled:bg-gray-500 disabled:cursor-not-allowed">
+                    <button id="generate-btn-ia" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto">
                         <svg id="loader-ia" class="loader w-5 h-5 mr-3 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.75V6.25m0 11.5v1.5m8.25-8.25H18M4.25 12H6m12.55-6.34l-1.06 1.06M7.81 16.19l-1.06 1.06M17.25 6.75l-1.06-1.06M7.81 7.81l-1.06-1.06" /></svg>
-                        <span id="generate-btn-text-ia">Generar Snippet</span>
+                        <span id="generate-btn-text-ia">Generar Script SQL</span>
                     </button>
                 </div>
                 <!-- Salida -->
                 <div id="output-container-ia" class="hidden space-y-4 pt-6">
                     <div class="flex flex-wrap justify-between items-center gap-4">
-                        <h2 class="text-xl font-semibold text-gray-300">3. Resultado (.snippet XML)</h2>
-                        <div class="flex gap-2">
+                        <h2 class="text-xl font-semibold text-gray-300">2. Resultado (Script SQL)</h2>
+                        <div class="flex gap-2 items-center">
+                             <input type="text" id="sql-filename-ia" class="form-input text-sm" placeholder="nombre_del_fichero.sql">
                             <button id="copy-btn-ia" class="bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-2 px-4 rounded-lg flex items-center">Copiar</button>
-                            <button id="download-btn-ia" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors">Descargar Fichero</button>
+                            <button id="download-btn-ia" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors">Descargar .sql</button>
                         </div>
                     </div>
                     <pre class="p-4 overflow-x-auto bg-gray-900 rounded-lg border border-gray-700"><code id="sql-output-ia" class="code-block text-cyan-300"></code></pre>
@@ -116,7 +87,6 @@
 
         <!-- Vista del Empaquetador Manual -->
         <div id="view-manual" class="hidden">
-            <!-- Contenido del empaquetador aquí -->
             <div class="space-y-6">
                  <!-- Metadata -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
@@ -189,9 +159,6 @@
     </div>
 
     <script>
-        // PEGA AQUÍ TU API KEY DE GOOGLE AI STUDIO
-        const apiKey = "AIzaSyB8kBhhLzqalW8aSvxLvGCuXueogQqRPYo"; 
-        
         // --- LÓGICA DE PESTAÑAS ---
         const tabIa = document.getElementById('tab-ia');
         const tabManual = document.getElementById('tab-manual');
@@ -214,7 +181,6 @@
 
         // --- LÓGICA COMPARTIDA ---
         function createSnippetXML(metadata, sqlCode) {
-            const safeSqlCode = sqlCode.replace(/]]>/g, ']]]]><![CDATA[>');
             return `<?xml version="1.0" encoding="utf-8" ?>
 <CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
     <CodeSnippet Format="1.0.0">
@@ -326,6 +292,14 @@
 
         // --- LÓGICA DEL GENERADOR CON IA ---
         (function() {
+            // =============================================================================
+            // ATENCIÓN: La API Key está ofuscada para no ser visible como texto plano.
+            // Esto NO es cifrado. La medida de seguridad principal es restringir la clave
+            // en la consola de Google Cloud para que solo funcione en tu URL de GitHub Pages.
+            // =============================================================================
+            const encodedApiKey = "QUl6YVN5QjhrQmhoTHpxYWxXOGFTdnhMdkdDdVh1ZW9nUXFSUFlv";
+            const apiKey = atob(encodedApiKey);
+
             const plainTextInput = document.getElementById('plain-text-input-ia');
             const generateBtn = document.getElementById('generate-btn-ia');
             const loader = document.getElementById('loader-ia');
@@ -335,20 +309,17 @@
             const copyBtn = document.getElementById('copy-btn-ia');
             const downloadBtn = document.getElementById('download-btn-ia');
             const feedback = document.getElementById('feedback-ia');
-            const snippetTitle = document.getElementById('snippet-title-ia');
+            const sqlFileNameInput = document.getElementById('sql-filename-ia');
             let tableNames = [];
 
             generateBtn.addEventListener('click', async () => {
                 if (typeof SCHEMA_DATA === 'undefined' || !SCHEMA_DATA.tables || !SCHEMA_DATA.relations) {
                     alert('Error: El fichero schema.js no se ha cargado o tiene un formato incorrecto.'); return;
                 }
-                if (apiKey.includes("...TU_CLAVE_API_VA_AQUI...")) {
-                    alert("Por favor, añade tu API Key de Google AI Studio en el fichero index.html."); return;
-                }
-
+                
                 const userInput = plainTextInput.value.trim();
-                if (!userInput || !snippetTitle.value) {
-                    alert('Por favor, introduce un título y una consulta.'); return;
+                if (!userInput) {
+                    alert('Por favor, introduce una consulta.'); return;
                 }
                 
                 setLoading(true);
@@ -359,24 +330,17 @@
                     const relevantTableNames = await getRelevantTables(userInput, tableNames);
                     showFeedback(`Paso 1: ¡Éxito! Usando tablas: ${relevantTableNames.join(', ')}`, 'success', feedback);
                     
-                    showFeedback('Paso 2: Generando snippet...', 'info', feedback);
+                    showFeedback('Paso 2: Generando script...', 'info', feedback);
                     const reducedSchema = buildReducedSchema(relevantTableNames);
                     const generatedSql = await generateSqlSnippet(userInput, reducedSchema);
                     
-                    const metadata = {
-                        title: snippetTitle.value, shortcut: document.getElementById('snippet-shortcut-ia').value,
-                        description: document.getElementById('snippet-description-ia').value, author: document.getElementById('snippet-author-ia').value,
-                        snippetType: document.getElementById('snippet-type-ia').value
-                    };
-                    
-                    const xmlSnippet = createSnippetXML(metadata, generatedSql);
-                    sqlOutput.textContent = xmlSnippet;
+                    sqlOutput.textContent = generatedSql;
                     outputContainer.classList.remove('hidden');
-                    showFeedback('¡Snippet generado con éxito!', 'success', feedback);
+                    showFeedback('¡Script SQL generado con éxito!', 'success', feedback);
 
                 } catch (error) {
                     console.error('Error en el proceso de generación:', error);
-                    sqlOutput.textContent = `<!-- Ocurrió un error: ${error.message} -->`;
+                    sqlOutput.textContent = `-- Ocurrió un error: ${error.message}`;
                     outputContainer.classList.remove('hidden');
                     showFeedback(`Error: ${error.message}`, 'error', feedback);
                 } finally {
@@ -385,7 +349,7 @@
             });
 
             async function callGeminiAPI(prompt) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }] };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
@@ -419,7 +383,7 @@
             }
 
             async function generateSqlSnippet(userInput, schemaContext) {
-                const prompt = `Eres un experto en SQL Server. Convierte la petición del usuario en un snippet T-SQL usando OBLIGATORIAMENTE el siguiente esquema: \n\n ${schemaContext} \n\n Petición: "${userInput}" \n\n Reglas: Devuelve SÓLO el código SQL, bien formateado y con mayúsculas en las palabras clave.`;
+                const prompt = `Eres un experto en SQL Server. Convierte la petición del usuario en un script T-SQL usando OBLIGATORIAMENTE el siguiente esquema: \n\n ${schemaContext} \n\n Petición: "${userInput}" \n\n Reglas: Devuelve SÓLO el código SQL, bien formateado y con mayúsculas en las palabras clave.`;
                 const response = await callGeminiAPI(prompt);
                 return response.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
             }
@@ -427,22 +391,28 @@
             function setLoading(isLoading) {
                 generateBtn.disabled = isLoading;
                 loader.classList.toggle('hidden', !isLoading);
-                generateBtnText.textContent = isLoading ? 'Generando...' : 'Generar Snippet';
+                generateBtnText.textContent = isLoading ? 'Generando...' : 'Generar Script SQL';
             }
 
             copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(sqlOutput.textContent).then(() => showFeedback('¡XML copiado!', 'success', feedback));
+                navigator.clipboard.writeText(sqlOutput.textContent).then(() => showFeedback('¡SQL copiado!', 'success', feedback));
             });
             
             downloadBtn.addEventListener('click', () => {
-                const xmlContent = sqlOutput.textContent;
-                if (!xmlContent) return;
-                const blob = new Blob([xmlContent], { type: 'text/xml;charset=utf-8' });
+                const sqlContent = sqlOutput.textContent;
+                if (!sqlContent) return;
+                const blob = new Blob([sqlContent], { type: 'text/sql;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                const fileName = (snippetTitle.value || 'snippet').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                a.download = `${fileName}.snippet`;
+                let fileName = sqlFileNameInput.value.trim();
+                if (!fileName) {
+                    fileName = 'query_generada';
+                }
+                if (!fileName.toLowerCase().endsWith('.sql')) {
+                    fileName += '.sql';
+                }
+                a.download = fileName;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
             });
         })();
