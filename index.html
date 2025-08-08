@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Snippets SQL Server (Solo Descarga)</title>
+    <title>Generador de Snippets SQL Server (Optimizado)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Cargar el fichero de esquema externo -->
     <script src="schema.js" defer></script>
@@ -47,7 +47,7 @@
                 </div>
                 <div>
                     <label for="snippet-shortcut" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
-                    <input type="text" id="snippet-shortcut" class="form-input" placeholder="Ej: selact">
+                    <input type="text" id="snippet-shortcut" class="form-input" placeholder="Ej: selpacnhc">
                 </div>
                 <div class="md:col-span-2">
                     <label for="snippet-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
@@ -73,7 +73,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label for="plain-text-input" class="block text-sm font-medium text-gray-400">Escribe tu consulta:</label>
-                    <textarea id="plain-text-input" rows="8" class="form-textarea h-full" placeholder="Ej: 'Selecciona los 5 clientes más recientes'"></textarea>
+                    <textarea id="plain-text-input" rows="8" class="form-textarea h-full" placeholder="Ej: 'selecciona los pacientes con nhc'"></textarea>
                 </div>
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-gray-400">O sube un archivo .SQL:</label>
@@ -180,13 +180,13 @@
             plainTextInput.placeholder = "Ej: 'Selecciona los 5 clientes más recientes'";
         });
 
-        // --- NUEVA LÓGICA DE GENERACIÓN EN DOS PASOS ---
+        // --- LÓGICA DE GENERACIÓN OPTIMIZADA ---
         generateBtn.addEventListener('click', async () => {
-            if (typeof PRELOADED_SCHEMA === 'undefined') {
-                alert('Error: El fichero schema.js no se ha cargado correctamente.');
+            if (typeof PRELOADED_SCHEMA_OBJECT === 'undefined') {
+                alert('Error: El fichero schema.js no se ha cargado o tiene un formato incorrecto.');
                 return;
             }
-            if (apiKey === "AIzaSy...TU_CLAVE_API_VA_AQUI...") {
+            if (apiKey.includes("...TU_CLAVE_API_VA_AQUI...")) {
                 alert("Por favor, añade tu API Key de Google AI Studio en el fichero index.html.");
                 return;
             }
@@ -198,19 +198,19 @@
             }
             
             setLoading(true);
-            showFeedback('Paso 1: Identificando tablas relevantes...', 'info');
+            showFeedback('Paso 1: Identificando tablas...', 'info');
 
             try {
                 // Paso 1: Obtener las tablas relevantes
-                if (tableNames.length === 0) { // Extraer nombres de tabla solo una vez
-                    tableNames = extractTableNames(PRELOADED_SCHEMA);
+                if (tableNames.length === 0) {
+                    tableNames = Object.keys(PRELOADED_SCHEMA_OBJECT);
                 }
                 const relevantTableNames = await getRelevantTables(userInput, tableNames);
-                showFeedback(`Paso 1: ¡Éxito! Se usarán las tablas: ${relevantTableNames.join(', ')}`, 'success');
+                showFeedback(`Paso 1: ¡Éxito! Usando tablas: ${relevantTableNames.join(', ')}`, 'success');
                 
                 // Paso 2: Construir el esquema reducido y generar el snippet
-                showFeedback('Paso 2: Generando el snippet con el esquema reducido...', 'info');
-                const reducedSchema = buildReducedSchema(relevantTableNames, PRELOADED_SCHEMA);
+                showFeedback('Paso 2: Generando snippet...', 'info');
+                const reducedSchema = buildReducedSchema(relevantTableNames);
                 const generatedSql = await generateSqlSnippet(userInput, reducedSchema);
                 
                 const metadata = {
@@ -249,63 +249,24 @@
             return result.candidates[0]?.content?.parts[0]?.text || "";
         }
 
-        function extractTableNames(schema) {
-            const regex = /CREATE TABLE (\[.*?\]\.\[.*?\])/g;
-            const names = new Set();
-            let match;
-            while ((match = regex.exec(schema)) !== null) {
-                names.add(match[1]);
-            }
-            return Array.from(names);
-        }
-
         async function getRelevantTables(userInput, allTableNames) {
-            const prompt = `
-                Dada la siguiente consulta de usuario y una lista de todas las tablas disponibles en la base de datos, 
-                devuelve una lista separada por comas de los nombres de tabla COMPLETOS (incluyendo el esquema como [dbo].[Tabla]) 
-                que son estrictamente necesarios para responder a la consulta.
-                
-                Responde ÚNICAMENTE con la lista de nombres de tabla, nada más.
-
-                Consulta de usuario: "${userInput}"
-
-                Lista de todas las tablas:
-                ${allTableNames.join('\n')}
-            `;
+            const prompt = `Dada la consulta de usuario: "${userInput}" y la lista de tablas: ${allTableNames.join(', ')}. Devuelve SÓLO una lista separada por comas de los nombres de tabla COMPLETOS necesarios.`;
             const response = await callGeminiAPI(prompt);
             return response.split(',').map(name => name.trim()).filter(Boolean);
         }
 
-        function buildReducedSchema(relevantTableNames, fullSchema) {
+        function buildReducedSchema(relevantTableNames) {
             let reduced = '';
             relevantTableNames.forEach(tableName => {
-                // Escapar caracteres especiales para la regex
-                const escapedTableName = tableName.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
-                const regex = new RegExp(`CREATE TABLE ${escapedTableName}[\\s\\S]*?;`, 'g');
-                const match = fullSchema.match(regex);
-                if (match) {
-                    reduced += match[0] + '\n\n';
+                if (PRELOADED_SCHEMA_OBJECT[tableName]) {
+                    reduced += PRELOADED_SCHEMA_OBJECT[tableName] + '\n\n';
                 }
             });
             return reduced;
         }
 
         async function generateSqlSnippet(userInput, schemaContext) {
-            const prompt = `
-                Eres un experto en SQL Server. Tu tarea es convertir la siguiente petición de un usuario en un snippet de código T-SQL.
-                Usa OBLIGATORIAMENTE el siguiente esquema para asegurarte de que los nombres de tablas y columnas son correctos.
-                ---
-                Esquema Relevante:
-                ${schemaContext}
-                ---
-                Petición del Usuario:
-                "${userInput}"
-                ---
-                Reglas de Salida:
-                1. El resultado DEBE ser sintácticamente correcto para SQL Server.
-                2. Formato: Usa indentación clara y mayúsculas para las palabras clave de SQL.
-                3. Respuesta: Devuelve ÚNICAMENTE el bloque de código SQL, sin explicaciones.
-            `;
+            const prompt = `Eres un experto en SQL Server. Convierte la petición del usuario en un snippet T-SQL usando OBLIGATORIAMENTE el siguiente esquema: \n\n ${schemaContext} \n\n Petición: "${userInput}" \n\n Reglas: Devuelve SÓLO el código SQL, bien formateado y con mayúsculas en las palabras clave.`;
             const response = await callGeminiAPI(prompt);
             return response.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
         }
@@ -345,7 +306,7 @@
         // --- Action Buttons ---
         copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(sqlOutput.textContent).then(() => {
-                showFeedback('¡XML copiado al portapapeles!', 'success');
+                showFeedback('¡XML copiado!', 'success');
             }, () => {
                 showFeedback('Error al copiar', 'error');
             });
