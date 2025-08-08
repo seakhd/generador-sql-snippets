@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Snippets SQL Server</title>
+    <title>Generador y Empaquetador de Snippets SQL</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cargar el fichero de esquema externo para el modo IA -->
+    <script src="schema.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,6 +17,8 @@
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader { animation: spin 1s linear infinite; }
         .form-input, .form-select, .form-textarea {
             background-color: #374151; border: 1px solid #4b5563; border-radius: 0.5rem;
             padding: 0.75rem; width: 100%; color: #e5e7eb; transition: all 0.2s ease-in-out;
@@ -22,184 +26,193 @@
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             outline: none; box-shadow: 0 0 0 2px #2563eb; border-color: #2563eb;
         }
+        .tab-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .tab-btn.active {
+            background-color: #0891b2; /* cyan-600 */
+            color: white;
+        }
     </style>
 </head>
 <body class="text-white flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
-        <!-- Header -->
+        <!-- Header y Pestañas -->
         <div class="text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Generador de Snippets SQL</h1>
-            <p class="text-gray-400 mt-2">Pega tu script SQL para convertirlo en un fichero <span class="font-mono bg-gray-700 px-2 py-1 rounded">.snippet</span>.</p>
-        </div>
-
-        <!-- Step 1: Metadata -->
-        <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-            <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Metadatos del Snippet</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label for="snippet-title" class="block text-sm font-medium text-gray-400 mb-1">Título</label>
-                    <input type="text" id="snippet-title" class="form-input" placeholder="Ej: Insertar nuevo paciente">
-                </div>
-                <div>
-                    <label for="snippet-shortcut" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
-                    <input type="text" id="snippet-shortcut" class="form-input" placeholder="Ej: inspac">
-                </div>
-                <div class="md:col-span-2">
-                    <label for="snippet-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
-                    <input type="text" id="snippet-description" class="form-input" placeholder="Ej: Snippet para un nuevo registro en la tabla Pacientes">
-                </div>
-                <div>
-                    <label for="snippet-author" class="block text-sm font-medium text-gray-400 mb-1">Autor</label>
-                    <input type="text" id="snippet-author" class="form-input" placeholder="Tu nombre o alias">
-                </div>
-                <div>
-                    <label for="snippet-type" class="block text-sm font-medium text-gray-400 mb-1">Tipo de Snippet</label>
-                    <select id="snippet-type" class="form-select">
-                        <option>Expansion</option>
-                        <option>SurroundsWith</option>
-                    </select>
-                </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Herramienta de Snippets SQL</h1>
+            <div class="mt-4 border-b border-gray-700">
+                <nav class="-mb-px flex justify-center space-x-4" aria-label="Tabs">
+                    <button id="tab-ia" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
+                        Generador Asistido por IA
+                    </button>
+                    <button id="tab-manual" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
+                        Empaquetador Manual
+                    </button>
+                </nav>
             </div>
         </div>
 
-        <!-- Step 2: Snippet Content -->
-         <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-            <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Script SQL</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <label for="plain-text-input" class="block text-sm font-medium text-gray-400">Pega aquí tu script final:</label>
-                    <textarea id="plain-text-input" rows="8" class="form-textarea h-full code-block" placeholder="SELECT * FROM dbo.Pac_Paciente WHERE FechaAlta > '2023-01-01';"></textarea>
-                </div>
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-400">O sube un archivo .SQL:</label>
-                    <div id="file-drop-area" class="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-gray-600 rounded-lg p-4 cursor-pointer hover:bg-gray-700/50 hover:border-cyan-500 transition">
-                        <svg class="w-10 h-10 mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                        <p id="file-info" class="mb-2 text-sm text-gray-400 text-center"><span class="font-semibold">Haz clic para subir</span> o arrastra</p>
-                        <input type="file" id="sql-file-input" class="hidden" accept=".sql">
+        <!-- Vista del Generador con IA -->
+        <div id="view-ia">
+            <!-- Contenido del generador IA aquí -->
+            <div class="space-y-6">
+                 <!-- Metadata -->
+                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Metadatos del Snippet</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="snippet-title-ia" class="block text-sm font-medium text-gray-400 mb-1">Título</label>
+                            <input type="text" id="snippet-title-ia" class="form-input" placeholder="Ej: Buscar pacientes por NHC">
+                        </div>
+                        <div>
+                            <label for="snippet-shortcut-ia" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
+                            <input type="text" id="snippet-shortcut-ia" class="form-input" placeholder="Ej: selpacnhc">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="snippet-description-ia" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                            <input type="text" id="snippet-description-ia" class="form-input" placeholder="Ej: Devuelve todos los pacientes con dicho NHC">
+                        </div>
+                        <div>
+                            <label for="snippet-author-ia" class="block text-sm font-medium text-gray-400 mb-1">Autor</label>
+                            <input type="text" id="snippet-author-ia" class="form-input" placeholder="Tu nombre o alias">
+                        </div>
+                        <div>
+                            <label for="snippet-type-ia" class="block text-sm font-medium text-gray-400 mb-1">Tipo de Snippet</label>
+                            <select id="snippet-type-ia" class="form-select">
+                                <option>Expansion</option>
+                                <option>SurroundsWith</option>
+                            </select>
+                        </div>
                     </div>
-                     <button id="clear-file-btn" class="hidden w-full mt-2 text-sm text-red-400 hover:text-red-300">Quitar archivo</button>
+                </div>
+                <!-- Contenido -->
+                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Petición de Consulta</h2>
+                     <label for="plain-text-input-ia" class="block text-sm font-medium text-gray-400 mb-2">Escribe en lenguaje natural lo que necesitas:</label>
+                    <textarea id="plain-text-input-ia" rows="6" class="form-textarea h-full" placeholder="Ej: 'Selecciona los 5 pacientes más recientes de la tabla Pac_Paciente'"></textarea>
+                </div>
+                <!-- Botón -->
+                <div class="text-center pt-4">
+                    <button id="generate-btn-ia" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        <svg id="loader-ia" class="loader w-5 h-5 mr-3 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.75V6.25m0 11.5v1.5m8.25-8.25H18M4.25 12H6m12.55-6.34l-1.06 1.06M7.81 16.19l-1.06 1.06M17.25 6.75l-1.06-1.06M7.81 7.81l-1.06-1.06" /></svg>
+                        <span id="generate-btn-text-ia">Generar Snippet</span>
+                    </button>
+                </div>
+                <!-- Salida -->
+                <div id="output-container-ia" class="hidden space-y-4 pt-6">
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <h2 class="text-xl font-semibold text-gray-300">3. Resultado (.snippet XML)</h2>
+                        <div class="flex gap-2">
+                            <button id="copy-btn-ia" class="bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-2 px-4 rounded-lg flex items-center">Copiar</button>
+                            <button id="download-btn-ia" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors">Descargar Fichero</button>
+                        </div>
+                    </div>
+                    <pre class="p-4 overflow-x-auto bg-gray-900 rounded-lg border border-gray-700"><code id="sql-output-ia" class="code-block text-cyan-300"></code></pre>
+                    <div id="feedback-ia" class="text-center font-medium h-4"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Action Button -->
-        <div class="text-center pt-4">
-            <button id="generate-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto">
-                Crear Snippet
-            </button>
-        </div>
-
-        <!-- Output Section -->
-        <div id="output-container" class="hidden space-y-4 pt-6">
-            <div class="flex flex-wrap justify-between items-center gap-4">
-                <h2 class="text-xl font-semibold text-gray-300">3. Resultado (.snippet XML)</h2>
-                <div class="flex gap-2">
-                    <button id="copy-btn" class="bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-2 px-4 rounded-lg flex items-center">
-                        Copiar
-                    </button>
-                    <button id="download-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Descargar Fichero
+        <!-- Vista del Empaquetador Manual -->
+        <div id="view-manual" class="hidden">
+            <!-- Contenido del empaquetador aquí -->
+            <div class="space-y-6">
+                 <!-- Metadata -->
+                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Metadatos del Snippet</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="snippet-title-manual" class="block text-sm font-medium text-gray-400 mb-1">Título</label>
+                            <input type="text" id="snippet-title-manual" class="form-input" placeholder="Ej: Insertar nuevo paciente">
+                        </div>
+                        <div>
+                            <label for="snippet-shortcut-manual" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
+                            <input type="text" id="snippet-shortcut-manual" class="form-input" placeholder="Ej: inspac">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="snippet-description-manual" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
+                            <input type="text" id="snippet-description-manual" class="form-input" placeholder="Ej: Snippet para un nuevo registro en la tabla Pacientes">
+                        </div>
+                        <div>
+                            <label for="snippet-author-manual" class="block text-sm font-medium text-gray-400 mb-1">Autor</label>
+                            <input type="text" id="snippet-author-manual" class="form-input" placeholder="Tu nombre o alias">
+                        </div>
+                        <div>
+                            <label for="snippet-type-manual" class="block text-sm font-medium text-gray-400 mb-1">Tipo de Snippet</label>
+                            <select id="snippet-type-manual" class="form-select">
+                                <option>Expansion</option>
+                                <option>SurroundsWith</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- Contenido -->
+                <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Script SQL</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label for="plain-text-input-manual" class="block text-sm font-medium text-gray-400">Pega aquí tu script final:</label>
+                            <textarea id="plain-text-input-manual" rows="8" class="form-textarea h-full code-block" placeholder="SELECT * FROM dbo.Pac_Paciente WHERE FechaAlta > '2023-01-01';"></textarea>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-gray-400">O sube un archivo .SQL:</label>
+                            <div id="file-drop-area-manual" class="flex flex-col items-center justify-center w-full h-full border-2 border-dashed border-gray-600 rounded-lg p-4 cursor-pointer hover:bg-gray-700/50 hover:border-cyan-500 transition">
+                                <svg class="w-10 h-10 mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                <p id="file-info-manual" class="mb-2 text-sm text-gray-400 text-center"><span class="font-semibold">Haz clic para subir</span> o arrastra</p>
+                                <input type="file" id="sql-file-input-manual" class="hidden" accept=".sql">
+                            </div>
+                            <button id="clear-file-btn-manual" class="hidden w-full mt-2 text-sm text-red-400 hover:text-red-300">Quitar archivo</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Botón -->
+                <div class="text-center pt-4">
+                    <button id="generate-btn-manual" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto">
+                        Crear Snippet
                     </button>
                 </div>
+                <!-- Salida -->
+                <div id="output-container-manual" class="hidden space-y-4 pt-6">
+                    <div class="flex flex-wrap justify-between items-center gap-4">
+                        <h2 class="text-xl font-semibold text-gray-300">3. Resultado (.snippet XML)</h2>
+                        <div class="flex gap-2">
+                            <button id="copy-btn-manual" class="bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-2 px-4 rounded-lg flex items-center">Copiar</button>
+                            <button id="download-btn-manual" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors">Descargar Fichero</button>
+                        </div>
+                    </div>
+                    <pre class="p-4 overflow-x-auto bg-gray-900 rounded-lg border border-gray-700"><code id="sql-output-manual" class="code-block text-cyan-300"></code></pre>
+                    <div id="feedback-manual" class="text-center font-medium h-4"></div>
+                </div>
             </div>
-            <pre class="p-4 overflow-x-auto bg-gray-900 rounded-lg border border-gray-700"><code id="sql-output" class="code-block text-cyan-300"></code></pre>
-            <div id="feedback" class="text-center font-medium h-4"></div>
         </div>
     </div>
 
     <script>
-        // DOM Elements
-        const plainTextInput = document.getElementById('plain-text-input');
-        const sqlFileInput = document.getElementById('sql-file-input');
-        const fileDropArea = document.getElementById('file-drop-area');
-        const fileInfo = document.getElementById('file-info');
-        const clearFileBtn = document.getElementById('clear-file-btn');
-        const generateBtn = document.getElementById('generate-btn');
-        const outputContainer = document.getElementById('output-container');
-        const sqlOutput = document.getElementById('sql-output');
-        const copyBtn = document.getElementById('copy-btn');
-        const downloadBtn = document.getElementById('download-btn');
-        const feedback = document.getElementById('feedback');
+        // PEGA AQUÍ TU API KEY DE GOOGLE AI STUDIO
+        const apiKey = "AIzaSyB8kBhhLzqalW8aSvxLvGCuXueogQqRPYo"; 
         
-        // Metadata inputs
-        const snippetTitle = document.getElementById('snippet-title');
-        const snippetShortcut = document.getElementById('snippet-shortcut');
-        const snippetDescription = document.getElementById('snippet-description');
-        const snippetAuthor = document.getElementById('snippet-author');
-        const snippetType = document.getElementById('snippet-type');
+        // --- LÓGICA DE PESTAÑAS ---
+        const tabIa = document.getElementById('tab-ia');
+        const tabManual = document.getElementById('tab-manual');
+        const viewIa = document.getElementById('view-ia');
+        const viewManual = document.getElementById('view-manual');
 
-        let fileContent = null;
-        let fileName = '';
-
-        // --- File Handling ---
-        fileDropArea.addEventListener('click', () => sqlFileInput.click());
-        sqlFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
-        ['dragenter', 'dragover'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.add('bg-gray-700/50', 'border-cyan-500'), false); });
-        ['dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.remove('bg-gray-700/50', 'border-cyan-500'), false); });
-        fileDropArea.addEventListener('drop', (e) => {
-            const file = e.dataTransfer.files[0];
-            if (file && file.name.endsWith('.sql')) { handleFile(file); } 
-            else { alert('Por favor, sube solo archivos .sql'); }
+        tabIa.addEventListener('click', () => {
+            viewIa.classList.remove('hidden');
+            viewManual.classList.add('hidden');
+            tabIa.classList.add('active');
+            tabManual.classList.remove('active');
         });
 
-        function handleFile(file) {
-            fileName = file.name;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                fileContent = e.target.result;
-                fileInfo.textContent = `Archivo: ${fileName}`;
-                fileInfo.classList.add('text-cyan-400', 'font-bold');
-                clearFileBtn.classList.remove('hidden');
-                plainTextInput.disabled = true;
-                plainTextInput.value = '';
-                plainTextInput.placeholder = 'La entrada de texto está deshabilitada.';
-            };
-            reader.readAsText(file);
-        }
-        
-        clearFileBtn.addEventListener('click', () => {
-            fileContent = null; fileName = ''; sqlFileInput.value = '';
-            fileInfo.innerHTML = `<span class="font-semibold">Haz clic para subir</span> o arrastra`;
-            fileInfo.classList.remove('text-cyan-400', 'font-bold');
-            clearFileBtn.classList.add('hidden');
-            plainTextInput.disabled = false;
-            plainTextInput.placeholder = "SELECT * FROM dbo.Pac_Paciente WHERE FechaAlta > '2023-01-01';";
+        tabManual.addEventListener('click', () => {
+            viewManual.classList.remove('hidden');
+            viewIa.classList.add('hidden');
+            tabManual.classList.add('active');
+            tabIa.classList.remove('active');
         });
 
-        // --- LÓGICA DE CREACIÓN DIRECTA ---
-        generateBtn.addEventListener('click', () => {
-            const userInput = fileContent || plainTextInput.value.trim();
-
-            if (!userInput) {
-                alert('Por favor, escribe o sube un script SQL.');
-                return;
-            }
-            if (!snippetTitle.value) {
-                alert('Por favor, introduce un título para el snippet.');
-                snippetTitle.focus();
-                return;
-            }
-            
-            try {
-                const metadata = {
-                    title: snippetTitle.value, shortcut: snippetShortcut.value, description: snippetDescription.value,
-                    author: snippetAuthor.value, snippetType: snippetType.value
-                };
-                
-                const xmlSnippet = createSnippetXML(metadata, userInput);
-                displayResult(xmlSnippet);
-                showFeedback('¡Snippet XML creado con éxito!', 'success');
-
-            } catch (error) {
-                console.error('Error al crear el snippet:', error);
-                displayResult(`<!-- Ocurrió un error: ${error.message} -->`);
-                showFeedback(`Error: ${error.message}`, 'error');
-            }
-        });
-        
+        // --- LÓGICA COMPARTIDA ---
         function createSnippetXML(metadata, sqlCode) {
             const safeSqlCode = sqlCode.replace(/]]>/g, ']]]]><![CDATA[>');
             return `<?xml version="1.0" encoding="utf-8" ?>
@@ -222,44 +235,217 @@
         }
 
         function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]); }
-        
-        function displayResult(sqlCode) {
-            sqlOutput.textContent = sqlCode;
-            outputContainer.classList.remove('hidden');
+
+        function showFeedback(message, type = 'info', feedbackElement) {
+            feedbackElement.textContent = message;
+            feedbackElement.className = 'text-center font-medium h-4 transition-colors duration-300';
+            if (type === 'success') feedbackElement.classList.add('text-green-400');
+            else if (type === 'error') feedbackElement.classList.add('text-red-400');
+            else feedbackElement.classList.add('text-blue-400');
         }
 
-        // --- Action Buttons ---
-        copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(sqlOutput.textContent).then(() => {
-                showFeedback('¡XML copiado!', 'success');
-            }, () => {
-                showFeedback('Error al copiar', 'error');
+        // --- LÓGICA DEL EMPAQUETADOR MANUAL ---
+        (function() {
+            const plainTextInput = document.getElementById('plain-text-input-manual');
+            const sqlFileInput = document.getElementById('sql-file-input-manual');
+            const fileDropArea = document.getElementById('file-drop-area-manual');
+            const fileInfo = document.getElementById('file-info-manual');
+            const clearFileBtn = document.getElementById('clear-file-btn-manual');
+            const generateBtn = document.getElementById('generate-btn-manual');
+            const outputContainer = document.getElementById('output-container-manual');
+            const sqlOutput = document.getElementById('sql-output-manual');
+            const copyBtn = document.getElementById('copy-btn-manual');
+            const downloadBtn = document.getElementById('download-btn-manual');
+            const feedback = document.getElementById('feedback-manual');
+            const snippetTitle = document.getElementById('snippet-title-manual');
+            let fileContent = null;
+
+            fileDropArea.addEventListener('click', () => sqlFileInput.click());
+            sqlFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
+            ['dragenter', 'dragover'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.add('bg-gray-700/50', 'border-cyan-500'), false); });
+            ['dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.remove('bg-gray-700/50', 'border-cyan-500'), false); });
+            fileDropArea.addEventListener('drop', (e) => {
+                const file = e.dataTransfer.files[0];
+                if (file && file.name.endsWith('.sql')) { handleFile(file); } 
+                else { alert('Por favor, sube solo archivos .sql'); }
             });
-        });
-        
-        downloadBtn.addEventListener('click', () => {
-            const xmlContent = sqlOutput.textContent;
-            if (!xmlContent) return;
-            const blob = new Blob([xmlContent], { type: 'text/xml;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const fileName = (snippetTitle.value || 'snippet').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            a.download = `${fileName}.snippet`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        });
 
-        function showFeedback(message, type = 'info') {
-            feedback.textContent = message;
-            feedback.className = 'text-center font-medium h-4 transition-colors duration-300';
-            if (type === 'success') feedback.classList.add('text-green-400');
-            else if (type === 'error') feedback.classList.add('text-red-400');
+            function handleFile(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    fileContent = e.target.result;
+                    fileInfo.textContent = `Archivo: ${file.name}`;
+                    fileInfo.classList.add('text-cyan-400', 'font-bold');
+                    clearFileBtn.classList.remove('hidden');
+                    plainTextInput.disabled = true; plainTextInput.value = '';
+                };
+                reader.readAsText(file);
+            }
             
-            setTimeout(() => { feedback.textContent = ''; }, 4000);
-        }
+            clearFileBtn.addEventListener('click', () => {
+                fileContent = null; sqlFileInput.value = '';
+                fileInfo.innerHTML = `<span class="font-semibold">Haz clic para subir</span> o arrastra`;
+                fileInfo.classList.remove('text-cyan-400', 'font-bold');
+                clearFileBtn.classList.add('hidden');
+                plainTextInput.disabled = false;
+            });
+
+            generateBtn.addEventListener('click', () => {
+                const userInput = fileContent || plainTextInput.value.trim();
+                if (!userInput || !snippetTitle.value) {
+                    alert('Por favor, introduce un título y un script SQL.');
+                    return;
+                }
+                const metadata = {
+                    title: snippetTitle.value, shortcut: document.getElementById('snippet-shortcut-manual').value,
+                    description: document.getElementById('snippet-description-manual').value, author: document.getElementById('snippet-author-manual').value,
+                    snippetType: document.getElementById('snippet-type-manual').value
+                };
+                const xmlSnippet = createSnippetXML(metadata, userInput);
+                sqlOutput.textContent = xmlSnippet;
+                outputContainer.classList.remove('hidden');
+            });
+
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(sqlOutput.textContent).then(() => showFeedback('¡XML copiado!', 'success', feedback));
+            });
+
+            downloadBtn.addEventListener('click', () => {
+                const xmlContent = sqlOutput.textContent;
+                if (!xmlContent) return;
+                const blob = new Blob([xmlContent], { type: 'text/xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const fileName = (snippetTitle.value || 'snippet').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                a.download = `${fileName}.snippet`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            });
+        })();
+
+        // --- LÓGICA DEL GENERADOR CON IA ---
+        (function() {
+            const plainTextInput = document.getElementById('plain-text-input-ia');
+            const generateBtn = document.getElementById('generate-btn-ia');
+            const loader = document.getElementById('loader-ia');
+            const generateBtnText = document.getElementById('generate-btn-text-ia');
+            const outputContainer = document.getElementById('output-container-ia');
+            const sqlOutput = document.getElementById('sql-output-ia');
+            const copyBtn = document.getElementById('copy-btn-ia');
+            const downloadBtn = document.getElementById('download-btn-ia');
+            const feedback = document.getElementById('feedback-ia');
+            const snippetTitle = document.getElementById('snippet-title-ia');
+            let tableNames = [];
+
+            generateBtn.addEventListener('click', async () => {
+                if (typeof SCHEMA_DATA === 'undefined' || !SCHEMA_DATA.tables || !SCHEMA_DATA.relations) {
+                    alert('Error: El fichero schema.js no se ha cargado o tiene un formato incorrecto.'); return;
+                }
+                if (apiKey.includes("...TU_CLAVE_API_VA_AQUI...")) {
+                    alert("Por favor, añade tu API Key de Google AI Studio en el fichero index.html."); return;
+                }
+
+                const userInput = plainTextInput.value.trim();
+                if (!userInput || !snippetTitle.value) {
+                    alert('Por favor, introduce un título y una consulta.'); return;
+                }
+                
+                setLoading(true);
+                showFeedback('Paso 1: Identificando tablas...', 'info', feedback);
+
+                try {
+                    if (tableNames.length === 0) { tableNames = Object.keys(SCHEMA_DATA.tables); }
+                    const relevantTableNames = await getRelevantTables(userInput, tableNames);
+                    showFeedback(`Paso 1: ¡Éxito! Usando tablas: ${relevantTableNames.join(', ')}`, 'success', feedback);
+                    
+                    showFeedback('Paso 2: Generando snippet...', 'info', feedback);
+                    const reducedSchema = buildReducedSchema(relevantTableNames);
+                    const generatedSql = await generateSqlSnippet(userInput, reducedSchema);
+                    
+                    const metadata = {
+                        title: snippetTitle.value, shortcut: document.getElementById('snippet-shortcut-ia').value,
+                        description: document.getElementById('snippet-description-ia').value, author: document.getElementById('snippet-author-ia').value,
+                        snippetType: document.getElementById('snippet-type-ia').value
+                    };
+                    
+                    const xmlSnippet = createSnippetXML(metadata, generatedSql);
+                    sqlOutput.textContent = xmlSnippet;
+                    outputContainer.classList.remove('hidden');
+                    showFeedback('¡Snippet generado con éxito!', 'success', feedback);
+
+                } catch (error) {
+                    console.error('Error en el proceso de generación:', error);
+                    sqlOutput.textContent = `<!-- Ocurrió un error: ${error.message} -->`;
+                    outputContainer.classList.remove('hidden');
+                    showFeedback(`Error: ${error.message}`, 'error', feedback);
+                } finally {
+                    setLoading(false);
+                }
+            });
+
+            async function callGeminiAPI(prompt) {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    throw new Error(errorBody.error.message || `Error en la API: ${response.statusText}`);
+                }
+                const result = await response.json();
+                return result.candidates[0]?.content?.parts[0]?.text || "";
+            }
+
+            async function getRelevantTables(userInput, allTableNames) {
+                const prompt = `Dada la consulta de usuario: "${userInput}" y la lista de tablas: ${allTableNames.join(', ')}. Devuelve SÓLO una lista separada por comas de los nombres de tabla COMPLETOS necesarios.`;
+                const response = await callGeminiAPI(prompt);
+                return response.split(',').map(name => name.trim()).filter(Boolean);
+            }
+
+            function buildReducedSchema(initialTables) {
+                const schemaToInclude = new Set(initialTables);
+                initialTables.forEach(tableName => {
+                    if (SCHEMA_DATA.relations[tableName]) {
+                        SCHEMA_DATA.relations[tableName].forEach(relatedTable => schemaToInclude.add(relatedTable));
+                    }
+                });
+                let reducedSchemaText = '';
+                schemaToInclude.forEach(tableName => {
+                    if (SCHEMA_DATA.tables[tableName]) {
+                        reducedSchemaText += SCHEMA_DATA.tables[tableName] + '\n\n';
+                    }
+                });
+                return reducedSchemaText;
+            }
+
+            async function generateSqlSnippet(userInput, schemaContext) {
+                const prompt = `Eres un experto en SQL Server. Convierte la petición del usuario en un snippet T-SQL usando OBLIGATORIAMENTE el siguiente esquema: \n\n ${schemaContext} \n\n Petición: "${userInput}" \n\n Reglas: Devuelve SÓLO el código SQL, bien formateado y con mayúsculas en las palabras clave.`;
+                const response = await callGeminiAPI(prompt);
+                return response.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
+            }
+
+            function setLoading(isLoading) {
+                generateBtn.disabled = isLoading;
+                loader.classList.toggle('hidden', !isLoading);
+                generateBtnText.textContent = isLoading ? 'Generando...' : 'Generar Snippet';
+            }
+
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(sqlOutput.textContent).then(() => showFeedback('¡XML copiado!', 'success', feedback));
+            });
+            
+            downloadBtn.addEventListener('click', () => {
+                const xmlContent = sqlOutput.textContent;
+                if (!xmlContent) return;
+                const blob = new Blob([xmlContent], { type: 'text/xml;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const fileName = (snippetTitle.value || 'snippet').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                a.download = `${fileName}.snippet`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            });
+        })();
     </script>
 </body>
 </html>
