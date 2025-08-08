@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Snippets SQL Server (Optimizado)</title>
+    <title>Generador de Snippets SQL Server</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Cargar el fichero de esquema externo -->
-    <script src="schema.js" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,8 +15,6 @@
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loader { animation: spin 1s linear infinite; }
         .form-input, .form-select, .form-textarea {
             background-color: #374151; border: 1px solid #4b5563; border-radius: 0.5rem;
             padding: 0.75rem; width: 100%; color: #e5e7eb; transition: all 0.2s ease-in-out;
@@ -33,8 +29,8 @@
     <div class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
         <!-- Header -->
         <div class="text-center">
-            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Generador de Snippets SQL Server</h1>
-            <p class="text-gray-400 mt-2">Crea y descarga snippets con el contexto de tu BBDD.</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Generador de Snippets SQL</h1>
+            <p class="text-gray-400 mt-2">Pega tu script SQL para convertirlo en un fichero <span class="font-mono bg-gray-700 px-2 py-1 rounded">.snippet</span>.</p>
         </div>
 
         <!-- Step 1: Metadata -->
@@ -43,15 +39,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="snippet-title" class="block text-sm font-medium text-gray-400 mb-1">Título</label>
-                    <input type="text" id="snippet-title" class="form-input" placeholder="Ej: Buscar pacientes por nhc">
+                    <input type="text" id="snippet-title" class="form-input" placeholder="Ej: Insertar nuevo paciente">
                 </div>
                 <div>
                     <label for="snippet-shortcut" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
-                    <input type="text" id="snippet-shortcut" class="form-input" placeholder="Ej: selpacnhc">
+                    <input type="text" id="snippet-shortcut" class="form-input" placeholder="Ej: inspac">
                 </div>
                 <div class="md:col-span-2">
                     <label for="snippet-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
-                    <input type="text" id="snippet-description" class="form-input" placeholder="Ej: Devuelve todos los pacientes con dicho nhc">
+                    <input type="text" id="snippet-description" class="form-input" placeholder="Ej: Snippet para un nuevo registro en la tabla Pacientes">
                 </div>
                 <div>
                     <label for="snippet-author" class="block text-sm font-medium text-gray-400 mb-1">Autor</label>
@@ -69,11 +65,11 @@
 
         <!-- Step 2: Snippet Content -->
          <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
-            <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Contenido del Snippet</h2>
+            <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Script SQL</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
-                    <label for="plain-text-input" class="block text-sm font-medium text-gray-400">Escribe tu consulta:</label>
-                    <textarea id="plain-text-input" rows="8" class="form-textarea h-full" placeholder="Ej: 'selecciona los pacientes con nhc'"></textarea>
+                    <label for="plain-text-input" class="block text-sm font-medium text-gray-400">Pega aquí tu script final:</label>
+                    <textarea id="plain-text-input" rows="8" class="form-textarea h-full code-block" placeholder="SELECT * FROM dbo.Pac_Paciente WHERE FechaAlta > '2023-01-01';"></textarea>
                 </div>
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-gray-400">O sube un archivo .SQL:</label>
@@ -89,9 +85,8 @@
 
         <!-- Action Button -->
         <div class="text-center pt-4">
-            <button id="generate-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto disabled:bg-gray-500 disabled:cursor-not-allowed">
-                <svg id="loader" class="loader w-5 h-5 mr-3 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.75V6.25m0 11.5v1.5m8.25-8.25H18M4.25 12H6m12.55-6.34l-1.06 1.06M7.81 16.19l-1.06 1.06M17.25 6.75l-1.06-1.06M7.81 7.81l-1.06-1.06" /></svg>
-                <span id="generate-btn-text">Generar Snippet</span>
+            <button id="generate-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto">
+                Crear Snippet
             </button>
         </div>
 
@@ -115,9 +110,6 @@
     </div>
 
     <script>
-        // PEGA AQUÍ TU API KEY DE GOOGLE AI STUDIO
-        const apiKey = "AIzaSyB8kBhhLzqalW8aSvxLvGCuXueogQqRPYo"; 
-        
         // DOM Elements
         const plainTextInput = document.getElementById('plain-text-input');
         const sqlFileInput = document.getElementById('sql-file-input');
@@ -125,8 +117,6 @@
         const fileInfo = document.getElementById('file-info');
         const clearFileBtn = document.getElementById('clear-file-btn');
         const generateBtn = document.getElementById('generate-btn');
-        const loader = document.getElementById('loader');
-        const generateBtnText = document.getElementById('generate-btn-text');
         const outputContainer = document.getElementById('output-container');
         const sqlOutput = document.getElementById('sql-output');
         const copyBtn = document.getElementById('copy-btn');
@@ -142,7 +132,6 @@
 
         let fileContent = null;
         let fileName = '';
-        let tableNames = [];
 
         // --- File Handling ---
         fileDropArea.addEventListener('click', () => sqlFileInput.click());
@@ -177,100 +166,40 @@
             fileInfo.classList.remove('text-cyan-400', 'font-bold');
             clearFileBtn.classList.add('hidden');
             plainTextInput.disabled = false;
-            plainTextInput.placeholder = "Ej: 'Selecciona los 5 clientes más recientes'";
+            plainTextInput.placeholder = "SELECT * FROM dbo.Pac_Paciente WHERE FechaAlta > '2023-01-01';";
         });
 
-        // --- LÓGICA DE GENERACIÓN OPTIMIZADA ---
-        generateBtn.addEventListener('click', async () => {
-            if (typeof PRELOADED_SCHEMA_OBJECT === 'undefined') {
-                alert('Error: El fichero schema.js no se ha cargado o tiene un formato incorrecto.');
-                return;
-            }
-            if (apiKey.includes("...TU_CLAVE_API_VA_AQUI...")) {
-                alert("Por favor, añade tu API Key de Google AI Studio en el fichero index.html.");
-                return;
-            }
-
+        // --- LÓGICA DE CREACIÓN DIRECTA ---
+        generateBtn.addEventListener('click', () => {
             const userInput = fileContent || plainTextInput.value.trim();
-            if (!userInput || !snippetTitle.value) {
-                alert('Por favor, introduce un título y una consulta.');
+
+            if (!userInput) {
+                alert('Por favor, escribe o sube un script SQL.');
+                return;
+            }
+            if (!snippetTitle.value) {
+                alert('Por favor, introduce un título para el snippet.');
+                snippetTitle.focus();
                 return;
             }
             
-            setLoading(true);
-            showFeedback('Paso 1: Identificando tablas...', 'info');
-
             try {
-                // Paso 1: Obtener las tablas relevantes
-                if (tableNames.length === 0) {
-                    tableNames = Object.keys(PRELOADED_SCHEMA_OBJECT);
-                }
-                const relevantTableNames = await getRelevantTables(userInput, tableNames);
-                showFeedback(`Paso 1: ¡Éxito! Usando tablas: ${relevantTableNames.join(', ')}`, 'success');
-                
-                // Paso 2: Construir el esquema reducido y generar el snippet
-                showFeedback('Paso 2: Generando snippet...', 'info');
-                const reducedSchema = buildReducedSchema(relevantTableNames);
-                const generatedSql = await generateSqlSnippet(userInput, reducedSchema);
-                
                 const metadata = {
                     title: snippetTitle.value, shortcut: snippetShortcut.value, description: snippetDescription.value,
                     author: snippetAuthor.value, snippetType: snippetType.value
                 };
                 
-                const xmlSnippet = createSnippetXML(metadata, generatedSql);
+                const xmlSnippet = createSnippetXML(metadata, userInput);
                 displayResult(xmlSnippet);
-                showFeedback('¡Snippet generado con éxito!', 'success');
+                showFeedback('¡Snippet XML creado con éxito!', 'success');
 
             } catch (error) {
-                console.error('Error en el proceso de generación:', error);
+                console.error('Error al crear el snippet:', error);
                 displayResult(`<!-- Ocurrió un error: ${error.message} -->`);
                 showFeedback(`Error: ${error.message}`, 'error');
-            } finally {
-                setLoading(false);
             }
         });
-
-        // --- FUNCIONES AUXILIARES ---
-
-        async function callGeminiAPI(prompt) {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-            const payload = { contents: [{ parts: [{ text: prompt }] }] };
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.error.message || `Error en la API: ${response.statusText}`);
-            }
-            const result = await response.json();
-            return result.candidates[0]?.content?.parts[0]?.text || "";
-        }
-
-        async function getRelevantTables(userInput, allTableNames) {
-            const prompt = `Dada la consulta de usuario: "${userInput}" y la lista de tablas: ${allTableNames.join(', ')}. Devuelve SÓLO una lista separada por comas de los nombres de tabla COMPLETOS necesarios.`;
-            const response = await callGeminiAPI(prompt);
-            return response.split(',').map(name => name.trim()).filter(Boolean);
-        }
-
-        function buildReducedSchema(relevantTableNames) {
-            let reduced = '';
-            relevantTableNames.forEach(tableName => {
-                if (PRELOADED_SCHEMA_OBJECT[tableName]) {
-                    reduced += PRELOADED_SCHEMA_OBJECT[tableName] + '\n\n';
-                }
-            });
-            return reduced;
-        }
-
-        async function generateSqlSnippet(userInput, schemaContext) {
-            const prompt = `Eres un experto en SQL Server. Convierte la petición del usuario en un snippet T-SQL usando OBLIGATORIAMENTE el siguiente esquema: \n\n ${schemaContext} \n\n Petición: "${userInput}" \n\n Reglas: Devuelve SÓLO el código SQL, bien formateado y con mayúsculas en las palabras clave.`;
-            const response = await callGeminiAPI(prompt);
-            return response.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
-        }
-
+        
         function createSnippetXML(metadata, sqlCode) {
             const safeSqlCode = sqlCode.replace(/]]>/g, ']]]]><![CDATA[>');
             return `<?xml version="1.0" encoding="utf-8" ?>
@@ -286,18 +215,14 @@
             </SnippetTypes>
         </Header>
         <Snippet>
-            <Code Language="SQL"><![CDATA[${safeSqlCode}]]></Code>
+            <Code Language="SQL"><![CDATA[${sqlCode}]]></Code>
         </Snippet>
     </CodeSnippet>
 </CodeSnippets>`;
         }
 
         function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]); }
-        function setLoading(isLoading) {
-            generateBtn.disabled = isLoading;
-            loader.classList.toggle('hidden', !isLoading);
-            generateBtnText.textContent = isLoading ? 'Generando...' : 'Generar Snippet';
-        }
+        
         function displayResult(sqlCode) {
             sqlOutput.textContent = sqlCode;
             outputContainer.classList.remove('hidden');
@@ -332,7 +257,8 @@
             feedback.className = 'text-center font-medium h-4 transition-colors duration-300';
             if (type === 'success') feedback.classList.add('text-green-400');
             else if (type === 'error') feedback.classList.add('text-red-400');
-            else feedback.classList.add('text-blue-400');
+            
+            setTimeout(() => { feedback.textContent = ''; }, 4000);
         }
     </script>
 </body>
