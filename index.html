@@ -43,7 +43,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label for="snippet-title" class="block text-sm font-medium text-gray-400 mb-1">Título</label>
-                    <input type="text" id="snippet-title" class="form-input" placeholder="Ej: Seleccionar Clientes Activos">
+                    <input type="text" id="snippet-title" class="form-input" placeholder="Ej: Buscar pacientes por nhc">
                 </div>
                 <div>
                     <label for="snippet-shortcut" class="block text-sm font-medium text-gray-400 mb-1">Atajo (Shortcut)</label>
@@ -51,7 +51,7 @@
                 </div>
                 <div class="md:col-span-2">
                     <label for="snippet-description" class="block text-sm font-medium text-gray-400 mb-1">Descripción</label>
-                    <input type="text" id="snippet-description" class="form-input" placeholder="Ej: Devuelve todos los clientes con estado activo">
+                    <input type="text" id="snippet-description" class="form-input" placeholder="Ej: Devuelve todos los pacientes con dicho nhc">
                 </div>
                 <div>
                     <label for="snippet-author" class="block text-sm font-medium text-gray-400 mb-1">Autor</label>
@@ -109,14 +109,15 @@
                     </button>
                 </div>
             </div>
-            <div class="bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
-                <pre class="p-4 overflow-x-auto"><code id="sql-output" class="code-block text-cyan-300"></code></pre>
-            </div>
+            <pre class="p-4 overflow-x-auto bg-gray-900 rounded-lg border border-gray-700"><code id="sql-output" class="code-block text-cyan-300"></code></pre>
             <div id="feedback" class="text-center font-medium h-4"></div>
         </div>
     </div>
 
     <script>
+        // PEGA AQUÍ TU API KEY DE GOOGLE AI STUDIO
+        const apiKey = "AIzaSyB8kBhhLzqalW8aSvxLvGCuXueogQqRPYo"; 
+        
         // DOM Elements
         const plainTextInput = document.getElementById('plain-text-input');
         const sqlFileInput = document.getElementById('sql-file-input');
@@ -141,28 +142,18 @@
 
         let fileContent = null;
         let fileName = '';
+        let tableNames = [];
 
         // --- File Handling ---
         fileDropArea.addEventListener('click', () => sqlFileInput.click());
-        sqlFileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) handleFile(e.target.files[0]);
-        });
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileDropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-        });
-        ['dragenter', 'dragover'].forEach(eventName => {
-            fileDropArea.addEventListener(eventName, () => fileDropArea.classList.add('bg-gray-700/50', 'border-cyan-500'), false);
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            fileDropArea.addEventListener(eventName, () => fileDropArea.classList.remove('bg-gray-700/50', 'border-cyan-500'), false);
-        });
+        sqlFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
+        ['dragenter', 'dragover'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.add('bg-gray-700/50', 'border-cyan-500'), false); });
+        ['dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.remove('bg-gray-700/50', 'border-cyan-500'), false); });
         fileDropArea.addEventListener('drop', (e) => {
             const file = e.dataTransfer.files[0];
-            if (file && file.name.endsWith('.sql')) {
-                handleFile(file);
-            } else {
-                alert('Por favor, sube solo archivos .sql');
-            }
+            if (file && file.name.endsWith('.sql')) { handleFile(file); } 
+            else { alert('Por favor, sube solo archivos .sql'); }
         });
 
         function handleFile(file) {
@@ -181,9 +172,7 @@
         }
         
         clearFileBtn.addEventListener('click', () => {
-            fileContent = null;
-            fileName = '';
-            sqlFileInput.value = '';
+            fileContent = null; fileName = ''; sqlFileInput.value = '';
             fileInfo.innerHTML = `<span class="font-semibold">Haz clic para subir</span> o arrastra`;
             fileInfo.classList.remove('text-cyan-400', 'font-bold');
             clearFileBtn.classList.add('hidden');
@@ -191,85 +180,136 @@
             plainTextInput.placeholder = "Ej: 'Selecciona los 5 clientes más recientes'";
         });
 
-        // --- Generation Logic ---
+        // --- NUEVA LÓGICA DE GENERACIÓN EN DOS PASOS ---
         generateBtn.addEventListener('click', async () => {
             if (typeof PRELOADED_SCHEMA === 'undefined') {
-                alert('Error: El fichero schema.js no se ha cargado correctamente. Asegúrate de que el fichero existe en la misma carpeta que el HTML.');
+                alert('Error: El fichero schema.js no se ha cargado correctamente.');
+                return;
+            }
+            if (apiKey === "AIzaSy...TU_CLAVE_API_VA_AQUI...") {
+                alert("Por favor, añade tu API Key de Google AI Studio en el fichero index.html.");
                 return;
             }
 
-            const inputText = plainTextInput.value.trim();
-            const userInput = fileContent || inputText;
-
-            if (!userInput) {
-                alert('Por favor, escribe una consulta o sube un archivo .SQL.');
-                return;
-            }
-            if (!snippetTitle.value) {
-                alert('Por favor, introduce un título para el snippet.');
-                snippetTitle.focus();
+            const userInput = fileContent || plainTextInput.value.trim();
+            if (!userInput || !snippetTitle.value) {
+                alert('Por favor, introduce un título y una consulta.');
                 return;
             }
             
             setLoading(true);
+            showFeedback('Paso 1: Identificando tablas relevantes...', 'info');
 
             try {
-                const prompt = `
-                    Eres un experto en SQL Server. Tu tarea es convertir la siguiente petición de un usuario en un snippet de código T-SQL (SQL Server) que sea limpio, optimizado y bien formateado.
-                    Contexto del Esquema de la Base de Datos (MUY IMPORTANTE): Usa OBLIGATORIAMENTE el siguiente esquema para asegurarte de que los nombres de tablas y columnas son correctos.
-                    ---
-                    ${PRELOADED_SCHEMA}
-                    ---
-                    Petición del Usuario:
-                    ---
-                    ${userInput}
-                    ---
-                    Reglas de Salida:
-                    1. El resultado DEBE ser sintácticamente correcto para SQL Server y basarse en el esquema proporcionado.
-                    2. Formato: Usa indentación clara y mayúsculas para las palabras clave de SQL (SELECT, FROM, etc.).
-                    3. Respuesta: Devuelve ÚNICAMENTE el bloque de código SQL, sin explicaciones ni texto introductorio.
-                `;
-
-                const apiKey = "AIzaSyB8kBhhLzqalW8aSvxLvGCuXueogQqRPYo"; // Managed by the execution environment
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error(`Error en la API: ${response.statusText}`);
-
-                const result = await response.json();
-                
-                if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-                    let generatedSql = result.candidates[0].content.parts[0].text;
-                    generatedSql = generatedSql.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
-                    
-                    const metadata = {
-                        title: snippetTitle.value,
-                        shortcut: snippetShortcut.value,
-                        description: snippetDescription.value,
-                        author: snippetAuthor.value,
-                        snippetType: snippetType.value
-                    };
-                    
-                    const xmlSnippet = createSnippetXML(metadata, generatedSql);
-                    displayResult(xmlSnippet);
-                } else {
-                    displayResult("<!-- No se pudo generar el snippet. Por favor, intenta de nuevo. -->");
+                // Paso 1: Obtener las tablas relevantes
+                if (tableNames.length === 0) { // Extraer nombres de tabla solo una vez
+                    tableNames = extractTableNames(PRELOADED_SCHEMA);
                 }
+                const relevantTableNames = await getRelevantTables(userInput, tableNames);
+                showFeedback(`Paso 1: ¡Éxito! Se usarán las tablas: ${relevantTableNames.join(', ')}`, 'success');
+                
+                // Paso 2: Construir el esquema reducido y generar el snippet
+                showFeedback('Paso 2: Generando el snippet con el esquema reducido...', 'info');
+                const reducedSchema = buildReducedSchema(relevantTableNames, PRELOADED_SCHEMA);
+                const generatedSql = await generateSqlSnippet(userInput, reducedSchema);
+                
+                const metadata = {
+                    title: snippetTitle.value, shortcut: snippetShortcut.value, description: snippetDescription.value,
+                    author: snippetAuthor.value, snippetType: snippetType.value
+                };
+                
+                const xmlSnippet = createSnippetXML(metadata, generatedSql);
+                displayResult(xmlSnippet);
+                showFeedback('¡Snippet generado con éxito!', 'success');
 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error en el proceso de generación:', error);
                 displayResult(`<!-- Ocurrió un error: ${error.message} -->`);
+                showFeedback(`Error: ${error.message}`, 'error');
             } finally {
                 setLoading(false);
             }
         });
-        
+
+        // --- FUNCIONES AUXILIARES ---
+
+        async function callGeminiAPI(prompt) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.error.message || `Error en la API: ${response.statusText}`);
+            }
+            const result = await response.json();
+            return result.candidates[0]?.content?.parts[0]?.text || "";
+        }
+
+        function extractTableNames(schema) {
+            const regex = /CREATE TABLE (\[.*?\]\.\[.*?\])/g;
+            const names = new Set();
+            let match;
+            while ((match = regex.exec(schema)) !== null) {
+                names.add(match[1]);
+            }
+            return Array.from(names);
+        }
+
+        async function getRelevantTables(userInput, allTableNames) {
+            const prompt = `
+                Dada la siguiente consulta de usuario y una lista de todas las tablas disponibles en la base de datos, 
+                devuelve una lista separada por comas de los nombres de tabla COMPLETOS (incluyendo el esquema como [dbo].[Tabla]) 
+                que son estrictamente necesarios para responder a la consulta.
+                
+                Responde ÚNICAMENTE con la lista de nombres de tabla, nada más.
+
+                Consulta de usuario: "${userInput}"
+
+                Lista de todas las tablas:
+                ${allTableNames.join('\n')}
+            `;
+            const response = await callGeminiAPI(prompt);
+            return response.split(',').map(name => name.trim()).filter(Boolean);
+        }
+
+        function buildReducedSchema(relevantTableNames, fullSchema) {
+            let reduced = '';
+            relevantTableNames.forEach(tableName => {
+                // Escapar caracteres especiales para la regex
+                const escapedTableName = tableName.replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+                const regex = new RegExp(`CREATE TABLE ${escapedTableName}[\\s\\S]*?;`, 'g');
+                const match = fullSchema.match(regex);
+                if (match) {
+                    reduced += match[0] + '\n\n';
+                }
+            });
+            return reduced;
+        }
+
+        async function generateSqlSnippet(userInput, schemaContext) {
+            const prompt = `
+                Eres un experto en SQL Server. Tu tarea es convertir la siguiente petición de un usuario en un snippet de código T-SQL.
+                Usa OBLIGATORIAMENTE el siguiente esquema para asegurarte de que los nombres de tablas y columnas son correctos.
+                ---
+                Esquema Relevante:
+                ${schemaContext}
+                ---
+                Petición del Usuario:
+                "${userInput}"
+                ---
+                Reglas de Salida:
+                1. El resultado DEBE ser sintácticamente correcto para SQL Server.
+                2. Formato: Usa indentación clara y mayúsculas para las palabras clave de SQL.
+                3. Respuesta: Devuelve ÚNICAMENTE el bloque de código SQL, sin explicaciones.
+            `;
+            const response = await callGeminiAPI(prompt);
+            return response.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
+        }
+
         function createSnippetXML(metadata, sqlCode) {
             const safeSqlCode = sqlCode.replace(/]]>/g, ']]]]><![CDATA[>');
             return `<?xml version="1.0" encoding="utf-8" ?>
@@ -291,16 +331,12 @@
 </CodeSnippets>`;
         }
 
-        function escapeXml(unsafe) {
-            return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]);
-        }
-        
+        function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]); }
         function setLoading(isLoading) {
             generateBtn.disabled = isLoading;
             loader.classList.toggle('hidden', !isLoading);
             generateBtnText.textContent = isLoading ? 'Generando...' : 'Generar Snippet';
         }
-
         function displayResult(sqlCode) {
             sqlOutput.textContent = sqlCode;
             outputContainer.classList.remove('hidden');
@@ -308,24 +344,16 @@
 
         // --- Action Buttons ---
         copyBtn.addEventListener('click', () => {
-            const textToCopy = sqlOutput.textContent;
-            const textArea = document.createElement('textarea');
-            textArea.value = textToCopy;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
+            navigator.clipboard.writeText(sqlOutput.textContent).then(() => {
                 showFeedback('¡XML copiado al portapapeles!', 'success');
-            } catch (err) {
+            }, () => {
                 showFeedback('Error al copiar', 'error');
-            }
-            document.body.removeChild(textArea);
+            });
         });
         
         downloadBtn.addEventListener('click', () => {
             const xmlContent = sqlOutput.textContent;
             if (!xmlContent) return;
-
             const blob = new Blob([xmlContent], { type: 'text/xml;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -333,20 +361,18 @@
             const fileName = (snippetTitle.value || 'snippet').replace(/[^a-z0-9]/gi, '_').toLowerCase();
             a.download = `${fileName}.snippet`;
             document.body.appendChild(a);
-a.click();
+            a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
 
         function showFeedback(message, type = 'info') {
             feedback.textContent = message;
-            feedback.className = 'text-center font-medium h-4'; // Reset classes
+            feedback.className = 'text-center font-medium h-4 transition-colors duration-300';
             if (type === 'success') feedback.classList.add('text-green-400');
             else if (type === 'error') feedback.classList.add('text-red-400');
-            
-            setTimeout(() => { feedback.textContent = ''; }, 4000);
+            else feedback.classList.add('text-blue-400');
         }
     </script>
 </body>
 </html>
-
