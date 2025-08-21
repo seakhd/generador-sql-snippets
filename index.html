@@ -43,38 +43,37 @@
             <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Herramienta de Snippets SQL</h1>
             <div class="mt-4 border-b border-gray-700">
                 <nav class="-mb-px flex justify-center space-x-4" aria-label="Tabs">
-                    <button id="tab-ia" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
+                    <!-- Pestaña de IA OCULTA -->
+                    <button id="tab-ia" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300 hidden">
                         Generador Asistido por IA
                     </button>
-                    <button id="tab-manual" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
+                    <!-- Pestaña Manual ACTIVA por defecto -->
+                    <button id="tab-manual" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
                         Empaquetador Manual
                     </button>
                 </nav>
             </div>
         </div>
 
-        <!-- Vista del Generador con IA -->
-        <div id="view-ia">
+        <!-- Vista del Generador con IA (Oculta por defecto) -->
+        <div id="view-ia" class="hidden">
             <div class="space-y-6">
-                <!-- Contenido -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                     <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Petición de Consulta</h2>
-                     <label for="plain-text-input-ia" class="block text-sm font-medium text-gray-400 mb-2">Escribe en lenguaje natural lo que necesitas y la IA generará el script SQL.</label>
+                    <label for="plain-text-input-ia" class="block text-sm font-medium text-gray-400 mb-2">Escribe en lenguaje natural lo que necesitas y la IA generará el script SQL.</label>
                     <textarea id="plain-text-input-ia" rows="6" class="form-textarea h-full" placeholder="Ej: 'Selecciona los 5 pacientes más recientes de la tabla Pac_Paciente'"></textarea>
                 </div>
-                <!-- Botón -->
                 <div class="text-center pt-4">
                     <button id="generate-btn-ia" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto">
                         <svg id="loader-ia" class="loader w-5 h-5 mr-3 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.75V6.25m0 11.5v1.5m8.25-8.25H18M4.25 12H6m12.55-6.34l-1.06 1.06M7.81 16.19l-1.06 1.06M17.25 6.75l-1.06-1.06M7.81 7.81l-1.06-1.06" /></svg>
                         <span id="generate-btn-text-ia">Generar Script SQL</span>
                     </button>
                 </div>
-                <!-- Salida -->
                 <div id="output-container-ia" class="hidden space-y-4 pt-6">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <h2 class="text-xl font-semibold text-gray-300">2. Resultado (Script SQL)</h2>
                         <div class="flex gap-2 items-center">
-                             <input type="text" id="sql-filename-ia" class="form-input text-sm" placeholder="nombre_del_fichero.sql">
+                            <input type="text" id="sql-filename-ia" class="form-input text-sm" placeholder="nombre_del_fichero.sql">
                             <button id="copy-btn-ia" class="bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-2 px-4 rounded-lg flex items-center">Copiar</button>
                             <button id="download-btn-ia" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg flex items-center transition-colors">Descargar .sql</button>
                         </div>
@@ -85,10 +84,9 @@
             </div>
         </div>
 
-        <!-- Vista del Empaquetador Manual -->
-        <div id="view-manual" class="hidden">
+        <!-- Vista del Empaquetador Manual (Visible por defecto) -->
+        <div id="view-manual">
             <div class="space-y-6">
-                 <!-- Metadata -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                     <h2 class="text-xl font-semibold text-gray-300 mb-4">1. Metadatos del Snippet</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -117,7 +115,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- Contenido -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
                     <h2 class="text-xl font-semibold text-gray-300 mb-4">2. Script SQL</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -136,13 +133,11 @@
                         </div>
                     </div>
                 </div>
-                <!-- Botón -->
                 <div class="text-center pt-4">
                     <button id="generate-btn-manual" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all flex items-center justify-center mx-auto">
                         Crear Snippet
                     </button>
                 </div>
-                <!-- Salida -->
                 <div id="output-container-manual" class="hidden space-y-4 pt-6">
                     <div class="flex flex-wrap justify-between items-center gap-4">
                         <h2 class="text-xl font-semibold text-gray-300">3. Resultado (.snippet XML)</h2>
@@ -292,11 +287,6 @@
 
         // --- LÓGICA DEL GENERADOR CON IA ---
         (function() {
-            // =============================================================================
-            // ATENCIÓN: La API Key está ofuscada para no ser visible como texto plano.
-            // Esto NO es cifrado. La medida de seguridad principal es restringir la clave
-            // en la consola de Google Cloud para que solo funcione en tu URL de GitHub Pages.
-            // =============================================================================
             const encodedApiKey = "QUl6YVN5QjhrQmhoTHpxYWxXOGFTdnhMdkdDdVh1ZW9nUXFSUFlv";
             const apiKey = atob(encodedApiKey);
 
@@ -349,7 +339,7 @@
             });
 
             async function callGeminiAPI(prompt) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: prompt }] }] };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (!response.ok) {
