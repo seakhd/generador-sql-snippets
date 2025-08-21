@@ -1,60 +1,22 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador y Empaquetador de Snippets SQL</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Cargar el fichero de esquema externo para el modo IA -->
-    <script src="schema.js" defer></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #111827; }
-        .code-block { font-family: 'Roboto Mono', monospace; }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loader { animation: spin 1s linear infinite; }
-        .form-input, .form-select, .form-textarea {
-            background-color: #374151; border: 1px solid #4b5563; border-radius: 0.5rem;
-            padding: 0.75rem; width: 100%; color: #e5e7eb; transition: all 0.2s ease-in-out;
-        }
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none; box-shadow: 0 0 0 2px #2563eb; border-color: #2563eb;
-        }
-        .tab-btn {
-            transition: all 0.2s ease-in-out;
-        }
-        .tab-btn.active {
-            background-color: #0891b2; /* cyan-600 */
-            color: white;
-        }
-    </style>
-</head>
-<body class="text-white flex items-center justify-center min-h-screen p-4">
-
-    <div class="w-full max-w-5xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
         <!-- Header y Pestañas -->
         <div class="text-center">
             <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Herramienta de Snippets SQL</h1>
             <div class="mt-4 border-b border-gray-700">
                 <nav class="-mb-px flex justify-center space-x-4" aria-label="Tabs">
-                    <button id="tab-ia" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
+                    <!-- Pestaña de IA OCULTA -->
+                    <button id="tab-ia" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300 hidden">
                         Generador Asistido por IA
                     </button>
-                    <button id="tab-manual" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
+                    <!-- Pestaña Manual ACTIVA por defecto -->
+                    <button id="tab-manual" class="tab-btn active whitespace-nowrap py-3 px-4 border-b-2 border-transparent font-medium text-lg text-gray-400 hover:text-white hover:border-gray-300">
                         Empaquetador Manual
                     </button>
                 </nav>
             </div>
         </div>
 
-        <!-- Vista del Generador con IA -->
-        <div id="view-ia">
+        <!-- Vista del Generador con IA OCULTA -->
+        <div id="view-ia" class="hidden">
             <div class="space-y-6">
                 <!-- Contenido -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
@@ -85,8 +47,8 @@
             </div>
         </div>
 
-        <!-- Vista del Empaquetador Manual -->
-        <div id="view-manual" class="hidden">
+        <!-- Vista del Empaquetador Manual VISIBLE -->
+        <div id="view-manual">
             <div class="space-y-6">
                  <!-- Metadata -->
                 <div class="bg-gray-900/50 p-6 rounded-xl border border-gray-700">
@@ -156,266 +118,3 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <script>
-        // --- LÓGICA DE PESTAÑAS ---
-        const tabIa = document.getElementById('tab-ia');
-        const tabManual = document.getElementById('tab-manual');
-        const viewIa = document.getElementById('view-ia');
-        const viewManual = document.getElementById('view-manual');
-
-        tabIa.addEventListener('click', () => {
-            viewIa.classList.remove('hidden');
-            viewManual.classList.add('hidden');
-            tabIa.classList.add('active');
-            tabManual.classList.remove('active');
-        });
-
-        tabManual.addEventListener('click', () => {
-            viewManual.classList.remove('hidden');
-            viewIa.classList.add('hidden');
-            tabManual.classList.add('active');
-            tabIa.classList.remove('active');
-        });
-
-        // --- LÓGICA COMPARTIDA ---
-        function createSnippetXML(metadata, sqlCode) {
-            return `<?xml version="1.0" encoding="utf-8" ?>
-<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
-    <CodeSnippet Format="1.0.0">
-        <Header>
-            <Title>${escapeXml(metadata.title) || 'Mi Snippet'}</Title>
-            <Shortcut>${escapeXml(metadata.shortcut) || ''}</Shortcut>
-            <Description>${escapeXml(metadata.description) || 'Descripción.'}</Description>
-            <Author>${escapeXml(metadata.author) || 'Generado por IA'}</Author>
-            <SnippetTypes>
-                <SnippetType>${escapeXml(metadata.snippetType) || 'Expansion'}</SnippetType>
-            </SnippetTypes>
-        </Header>
-        <Snippet>
-            <Code Language="SQL"><![CDATA[${sqlCode}]]></Code>
-        </Snippet>
-    </CodeSnippet>
-</CodeSnippets>`;
-        }
-
-        function escapeXml(unsafe) { return unsafe.replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','\'':'&apos;','"':'&quot;'})[c]); }
-
-        function showFeedback(message, type = 'info', feedbackElement) {
-            feedbackElement.textContent = message;
-            feedbackElement.className = 'text-center font-medium h-4 transition-colors duration-300';
-            if (type === 'success') feedbackElement.classList.add('text-green-400');
-            else if (type === 'error') feedbackElement.classList.add('text-red-400');
-            else feedbackElement.classList.add('text-blue-400');
-        }
-
-        // --- LÓGICA DEL EMPAQUETADOR MANUAL ---
-        (function() {
-            const plainTextInput = document.getElementById('plain-text-input-manual');
-            const sqlFileInput = document.getElementById('sql-file-input-manual');
-            const fileDropArea = document.getElementById('file-drop-area-manual');
-            const fileInfo = document.getElementById('file-info-manual');
-            const clearFileBtn = document.getElementById('clear-file-btn-manual');
-            const generateBtn = document.getElementById('generate-btn-manual');
-            const outputContainer = document.getElementById('output-container-manual');
-            const sqlOutput = document.getElementById('sql-output-manual');
-            const copyBtn = document.getElementById('copy-btn-manual');
-            const downloadBtn = document.getElementById('download-btn-manual');
-            const feedback = document.getElementById('feedback-manual');
-            const snippetTitle = document.getElementById('snippet-title-manual');
-            let fileContent = null;
-
-            fileDropArea.addEventListener('click', () => sqlFileInput.click());
-            sqlFileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false); });
-            ['dragenter', 'dragover'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.add('bg-gray-700/50', 'border-cyan-500'), false); });
-            ['dragleave', 'drop'].forEach(eventName => { fileDropArea.addEventListener(eventName, () => fileDropArea.classList.remove('bg-gray-700/50', 'border-cyan-500'), false); });
-            fileDropArea.addEventListener('drop', (e) => {
-                const file = e.dataTransfer.files[0];
-                if (file && file.name.endsWith('.sql')) { handleFile(file); } 
-                else { alert('Por favor, sube solo archivos .sql'); }
-            });
-
-            function handleFile(file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    fileContent = e.target.result;
-                    fileInfo.textContent = `Archivo: ${file.name}`;
-                    fileInfo.classList.add('text-cyan-400', 'font-bold');
-                    clearFileBtn.classList.remove('hidden');
-                    plainTextInput.disabled = true; plainTextInput.value = '';
-                };
-                reader.readAsText(file);
-            }
-            
-            clearFileBtn.addEventListener('click', () => {
-                fileContent = null; sqlFileInput.value = '';
-                fileInfo.innerHTML = `<span class="font-semibold">Haz clic para subir</span> o arrastra`;
-                fileInfo.classList.remove('text-cyan-400', 'font-bold');
-                clearFileBtn.classList.add('hidden');
-                plainTextInput.disabled = false;
-            });
-
-            generateBtn.addEventListener('click', () => {
-                const userInput = fileContent || plainTextInput.value.trim();
-                if (!userInput || !snippetTitle.value) {
-                    alert('Por favor, introduce un título y un script SQL.');
-                    return;
-                }
-                const metadata = {
-                    title: snippetTitle.value, shortcut: document.getElementById('snippet-shortcut-manual').value,
-                    description: document.getElementById('snippet-description-manual').value, author: document.getElementById('snippet-author-manual').value,
-                    snippetType: document.getElementById('snippet-type-manual').value
-                };
-                const xmlSnippet = createSnippetXML(metadata, userInput);
-                sqlOutput.textContent = xmlSnippet;
-                outputContainer.classList.remove('hidden');
-            });
-
-            copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(sqlOutput.textContent).then(() => showFeedback('¡XML copiado!', 'success', feedback));
-            });
-
-            downloadBtn.addEventListener('click', () => {
-                const xmlContent = sqlOutput.textContent;
-                if (!xmlContent) return;
-                const blob = new Blob([xmlContent], { type: 'text/xml;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const fileName = (snippetTitle.value || 'snippet').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                a.download = `${fileName}.snippet`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-            });
-        })();
-
-        // --- LÓGICA DEL GENERADOR CON IA ---
-        (function() {
-            // =============================================================================
-            // ATENCIÓN: La API Key está ofuscada para no ser visible como texto plano.
-            // Esto NO es cifrado. La medida de seguridad principal es restringir la clave
-            // en la consola de Google Cloud para que solo funcione en tu URL de GitHub Pages.
-            // =============================================================================
-            const encodedApiKey = "QUl6YVN5QjhrQmhoTHpxYWxXOGFTdnhMdkdDdVh1ZW9nUXFSUFlv";
-            const apiKey = atob(encodedApiKey);
-
-            const plainTextInput = document.getElementById('plain-text-input-ia');
-            const generateBtn = document.getElementById('generate-btn-ia');
-            const loader = document.getElementById('loader-ia');
-            const generateBtnText = document.getElementById('generate-btn-text-ia');
-            const outputContainer = document.getElementById('output-container-ia');
-            const sqlOutput = document.getElementById('sql-output-ia');
-            const copyBtn = document.getElementById('copy-btn-ia');
-            const downloadBtn = document.getElementById('download-btn-ia');
-            const feedback = document.getElementById('feedback-ia');
-            const sqlFileNameInput = document.getElementById('sql-filename-ia');
-            let tableNames = [];
-
-            generateBtn.addEventListener('click', async () => {
-                if (typeof SCHEMA_DATA === 'undefined' || !SCHEMA_DATA.tables || !SCHEMA_DATA.relations) {
-                    alert('Error: El fichero schema.js no se ha cargado o tiene un formato incorrecto.'); return;
-                }
-                
-                const userInput = plainTextInput.value.trim();
-                if (!userInput) {
-                    alert('Por favor, introduce una consulta.'); return;
-                }
-                
-                setLoading(true);
-                showFeedback('Paso 1: Identificando tablas...', 'info', feedback);
-
-                try {
-                    if (tableNames.length === 0) { tableNames = Object.keys(SCHEMA_DATA.tables); }
-                    const relevantTableNames = await getRelevantTables(userInput, tableNames);
-                    showFeedback(`Paso 1: ¡Éxito! Usando tablas: ${relevantTableNames.join(', ')}`, 'success', feedback);
-                    
-                    showFeedback('Paso 2: Generando script...', 'info', feedback);
-                    const reducedSchema = buildReducedSchema(relevantTableNames);
-                    const generatedSql = await generateSqlSnippet(userInput, reducedSchema);
-                    
-                    sqlOutput.textContent = generatedSql;
-                    outputContainer.classList.remove('hidden');
-                    showFeedback('¡Script SQL generado con éxito!', 'success', feedback);
-
-                } catch (error) {
-                    console.error('Error en el proceso de generación:', error);
-                    sqlOutput.textContent = `-- Ocurrió un error: ${error.message}`;
-                    outputContainer.classList.remove('hidden');
-                    showFeedback(`Error: ${error.message}`, 'error', feedback);
-                } finally {
-                    setLoading(false);
-                }
-            });
-
-            async function callGeminiAPI(prompt) {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ parts: [{ text: prompt }] }] };
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    throw new Error(errorBody.error.message || `Error en la API: ${response.statusText}`);
-                }
-                const result = await response.json();
-                return result.candidates[0]?.content?.parts[0]?.text || "";
-            }
-
-            async function getRelevantTables(userInput, allTableNames) {
-                const prompt = `Dada la consulta de usuario: "${userInput}" y la lista de tablas: ${allTableNames.join(', ')}. Devuelve SÓLO una lista separada por comas de los nombres de tabla COMPLETOS necesarios.`;
-                const response = await callGeminiAPI(prompt);
-                return response.split(',').map(name => name.trim()).filter(Boolean);
-            }
-
-            function buildReducedSchema(initialTables) {
-                const schemaToInclude = new Set(initialTables);
-                initialTables.forEach(tableName => {
-                    if (SCHEMA_DATA.relations[tableName]) {
-                        SCHEMA_DATA.relations[tableName].forEach(relatedTable => schemaToInclude.add(relatedTable));
-                    }
-                });
-                let reducedSchemaText = '';
-                schemaToInclude.forEach(tableName => {
-                    if (SCHEMA_DATA.tables[tableName]) {
-                        reducedSchemaText += SCHEMA_DATA.tables[tableName] + '\n\n';
-                    }
-                });
-                return reducedSchemaText;
-            }
-
-            async function generateSqlSnippet(userInput, schemaContext) {
-                const prompt = `Eres un experto en SQL Server. Convierte la petición del usuario en un script T-SQL usando OBLIGATORIAMENTE el siguiente esquema: \n\n ${schemaContext} \n\n Petición: "${userInput}" \n\n Reglas: Devuelve SÓLO el código SQL, bien formateado y con mayúsculas en las palabras clave.`;
-                const response = await callGeminiAPI(prompt);
-                return response.replace(/^```sql\n?/, '').replace(/```$/, '').trim();
-            }
-
-            function setLoading(isLoading) {
-                generateBtn.disabled = isLoading;
-                loader.classList.toggle('hidden', !isLoading);
-                generateBtnText.textContent = isLoading ? 'Generando...' : 'Generar Script SQL';
-            }
-
-            copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(sqlOutput.textContent).then(() => showFeedback('¡SQL copiado!', 'success', feedback));
-            });
-            
-            downloadBtn.addEventListener('click', () => {
-                const sqlContent = sqlOutput.textContent;
-                if (!sqlContent) return;
-                const blob = new Blob([sqlContent], { type: 'text/sql;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                let fileName = sqlFileNameInput.value.trim();
-                if (!fileName) {
-                    fileName = 'query_generada';
-                }
-                if (!fileName.toLowerCase().endsWith('.sql')) {
-                    fileName += '.sql';
-                }
-                a.download = fileName;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-            });
-        })();
-    </script>
-</body>
-</html>
